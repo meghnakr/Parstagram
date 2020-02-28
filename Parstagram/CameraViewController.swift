@@ -76,8 +76,14 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
         //self.ref.child("Users").child(user!.uid).child("posts").child(postID!).setValue(["post": "post"])
         //let result = self.ref.child("Users").child(user!.uid).child("posts").child(postID!).value(forKey: "image")
         //print("\(result)")
+            let date = Date()
+            let day = Calendar.current.component(.day, from: date)
+            let month = Calendar.current.component(.month, from: date)
+            let year = Calendar.current.component(.year, from: date)
+            let hour = Calendar.current.component(.hour, from: date)
+            let minutes = Calendar.current.component(.minute, from: date)
         
-            let post = ["imageID": randomID, "caption": self.captionField.text, "username": username] as [String : Any]
+            let post = ["imageID": randomID, "caption": self.captionField.text, "username": username, "day": day, "month": month, "year": year, "hour": hour, "minutes": minutes] as [String : Any]
             let postUpdates = ["/posts/\(postID!)": post]
             self.ref.updateChildValues(postUpdates)
         }

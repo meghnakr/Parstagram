@@ -9,6 +9,7 @@
 import UIKit
 import Firebase
 import FirebaseStorage
+import FirebaseAuth
 
 class FeedViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
@@ -19,6 +20,19 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
     //var posts: [AnyObject]
     var posts = [String : [String : Any]]()
     //var posts = DatabaseQuery()
+    var postArray = [postStructure]()
+    
+    struct postStructure {
+        var imageID = ""
+        var caption = ""
+        var username = ""
+        var date = 0
+        var month = 0
+        var year = 0
+        var hour = 0
+        var minute = 0
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         feedTableView.delegate = self
@@ -47,17 +61,52 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
     func loadPosts()
     {
         self.posts.removeAll()
+        self.postArray.removeAll()
+        postArray = []
         //self.posts.removeAllObservers()
         //self.posts = (ref?.child("posts").queryLimited(toFirst: 20))!
         self.ref.child("posts").observeSingleEvent(of: .value) { (snapshot) in
+            
+            self.posts.removeAll()
+            self.postArray.removeAll()
+            self.postArray = []
             let temp = snapshot.value
             if(temp is NSNull)
             {
                 return
             }
             self.posts = temp as! [String : [String : Any]]
-        print(self.posts)
-        self.feedTableView.reloadData()
+            print(self.posts)
+            self.feedTableView.reloadData()
+        
+            print("Array: \(self.postArray)")
+            var i = 0
+            for post in self.posts
+            {
+                var postStruct = postStructure()
+                postStruct.imageID = post.value["imageID"] as! String
+                postStruct.caption = post.value["caption"] as! String
+                postStruct.username = post.value["username"] as! String
+                postStruct.date = post.value["day"] as! Int
+                postStruct.month = post.value["month"] as! Int
+                postStruct.year = post.value["year"] as! Int
+                postStruct.hour = post.value["hour"] as! Int
+                postStruct.minute = post.value["minutes"] as! Int
+                /*self.postArray[i].imageID = post.value["imageID"] as! String
+                self.postArray[i].caption = post.value["caption"] as! String
+                self.postArray[i].username = post.value["username"] as! String
+                self.postArray[i].date = post.value["date"] as! Int
+                self.postArray[i].month = post.value["month"] as! Int
+                self.postArray[i].year = post.value["year"] as! Int
+                self.postArray[i].hour = post.value["hour"] as! Int
+                self.postArray[i].minute = post.value["minutes"] as! Int*/
+                self.postArray.append(postStruct)
+                i = i + 1
+            }
+            print("Unsorted Array: \(self.postArray)")
+            self.sortPosts()
+            print("Sorted Array: \(self.postArray)")
+            self.feedTableView.reloadData()
         }
         /*let db = ref.child("posts")
         let query = db.queryLimited(toFirst: 20)
@@ -72,7 +121,55 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
             }*/
             self.posts = snapshot.value as! [String : [String : Any]]*/
         //})
-        self.feedTableView.reloadData()
+        
+        //var urlRef = Firebase(url: "https://parstagram-2c5fd.firebaseio.com/")
+        
+        //self.feedTableView.reloadData()
+    }
+    
+    func sortPosts()
+    {
+        print("sort: count  = \(postArray.count)")
+        var i = 0
+        while i < postArray.count
+        {
+            print("i = \(i)")
+            var max = i
+            var j = i+1
+            while j < postArray.count
+            {
+                let post = postArray[j]
+                let postMax = postArray[max]
+                if(post.year > postMax.year)
+                {
+                    max = j
+                } else if(post.year == postMax.year) {
+                    if(post.month > postMax.month)
+                    {
+                        max = j
+                    } else if(post.month == postMax.month) {
+                        if(post.date > postMax.date)
+                        {
+                            max = j
+                        }
+                        else if(post.date == postMax.date) {
+                            if(post.hour > postMax.hour) {
+                                max = j
+                            } else if(post.hour == postMax.hour) {
+                                if(post.minute > postMax.minute) {
+                                    max = j
+                                }
+                            }
+                        }
+                    }
+                }
+                j = j + 1
+            }
+            let temp = postArray[i]
+            postArray[i] = postArray[max]
+            postArray[max] = temp
+            i = i + 1
+        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -81,18 +178,34 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //print("posts count = \(posts.count)")
-        var i = 0
+        /*var i = 0
         for post in posts
         {
             i = i + 1
         }
         print(i)
-        return i
+        return i*/
+        print("count = \(postArray.count)")
+        return postArray.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = feedTableView.dequeueReusableCell(withIdentifier: "PostCell", for: indexPath) as! PostCell
+        print("row no. \(indexPath.row)")
         
+        let randomID = postArray[indexPath.row].imageID
+        let storageRef = Storage.storage().reference(withPath: "images/\(randomID).jpg")
+        storageRef.getData(maxSize: 10 * 1024 * 1024) { [weak self] (data, error) in
+            if let error = error {
+                print("Error\(error.localizedDescription)")
+                return
+            }
+            if let data = data {
+                cell.photoView.image = UIImage(data: data)
+            }
+        }
+        cell.usernameLabel.text = postArray[indexPath.row].username
+        cell.captionLabel.text = postArray[indexPath.row].caption
         /*let post = posts[indexPath.row]
         let randomID = post["imageID"] as! String
         let storageRef = Storage.storage().reference(withPath: "images/\(randomID).jpg")
@@ -107,12 +220,12 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
         }
         cell.usernameLabel.text = post["username"] as! String
         cell.captionLabel.text = post["caption"] as! String*/
-        var i = 0
+        /*var i = 0
         for post in posts
         {
             if(i == indexPath.row)
             {
-                print("Reached here 1")
+                //print("Reached here 1")
                 /*let imageURL = URL(string: (post.value["image"] as? String)!)
                 print(imageURL)
                 let data = try? Data(contentsOf: imageURL!)
@@ -142,7 +255,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
             {
                 i = i + 1
             }
-        }
+        }*/
         //let imageURL = URL(string: (post["image"] as? String)!)
         //let data = try? Data(contentsOf: imageURL!)
         /*if let imageData = data {
@@ -153,6 +266,17 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
         return cell
     }
     
+    @IBAction func onLogout(_ sender: Any) {
+        do {
+            try Auth.auth().signOut()
+        } catch let signOutError as NSError {
+            print("Error signing out: %@", signOutError)
+        }
+        let delegate = SceneDelegate()
+        let main = UIStoryboard(name: "Main", bundle: nil)
+        let loginViewController = main.instantiateViewController(withIdentifier: "LoginViewController")
+        delegate.window?.rootViewController = loginViewController
+    }
     /*
     // MARK: - Navigation
 
