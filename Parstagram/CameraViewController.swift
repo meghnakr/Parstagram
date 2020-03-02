@@ -82,8 +82,10 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
             let year = Calendar.current.component(.year, from: date)
             let hour = Calendar.current.component(.hour, from: date)
             let minutes = Calendar.current.component(.minute, from: date)
+            
+            let commentDictionary = [String: [String : Any]]()
         
-            let post = ["imageID": randomID, "caption": self.captionField.text, "username": username, "day": day, "month": month, "year": year, "hour": hour, "minutes": minutes] as [String : Any]
+            let post = ["postID": postID!, "imageID": randomID, "caption": self.captionField.text ?? "", "username": username!, "day": day, "month": month, "year": year, "hour": hour, "minutes": minutes, "comments": commentDictionary] as [String : Any]
             let postUpdates = ["/posts/\(postID!)": post]
             self.ref.updateChildValues(postUpdates)
         }
@@ -115,7 +117,7 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         let image = info[.editedImage] as! UIImage
         let size = CGSize(width: 300, height: 300)
-        let scaledImage = image.af_imageScaled(to: size)
+        let scaledImage = image.af_imageAspectScaled(toFill: size)
         imageView.image = scaledImage
         dismiss(animated: true, completion: nil)
     }
